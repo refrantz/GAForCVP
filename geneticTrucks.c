@@ -15,6 +15,7 @@ const int numTrucks = 9;
 const int numNodes = 55;
 const int crossoverChance = 50;
 const int mutationChance = 5;
+const int crossOverSize = 5;
 
 int allNodes[numNodes][4];
 double distanceBetweenNodes[numNodes][numNodes];
@@ -32,6 +33,7 @@ tuple<Team,Team> crossOver(Team team1, Team team2);
 Team mutate(Team team);
 double calculateFitness(Team team);
 Team makeRandomTeam();
+bool contains(int e, int arr[]);
 
 //debugging function
 void printTeam(Team team);
@@ -82,6 +84,15 @@ void printTeam(Team team){
     }
 }
 
+bool contains(int e, int arr[]){
+    for (int i = 0; i<sizeof(*arr)/sizeof(e); i++){
+        if (arr[i] == e){
+            return true;
+        }
+    }
+    return false;
+}
+
 void readFile(){
 
     string nodeString;
@@ -123,14 +134,14 @@ tuple<Team,Team> crossOver(Team team1, Team team2){
 
     if (experimental::randint(0,99) < crossoverChance){
 
-        int beginIndexSubstring = experimental::randint(0,numNodes-5);
-        int endIndexSubstring = beginIndexSubstring+5;
+        int beginIndexSubstring = experimental::randint(0,numNodes-crossOverSize);
+        int endIndexSubstring = beginIndexSubstring+crossOverSize;
 
+        //copy randomly selected subsequence to children
         for(int i = beginIndexSubstring; i < endIndexSubstring;i++){
             substring1[i] = team1.sequenceNodes[i][0];
             substring2[i] = team2.sequenceNodes[i][0];
 
-            //copy randomly selected subsequence to children
             for(int j = 0; j<4; j++){
                 childteam1.sequenceNodes[i][j] = team1.sequenceNodes[i][j];
                 childteam2.sequenceNodes[i][j] = team2.sequenceNodes[i][j];
@@ -138,10 +149,34 @@ tuple<Team,Team> crossOver(Team team1, Team team2){
         }
 
         //copy rest of the sequence from other parent
+        int k1 = 0;
+        int k2 = 0;
         for(int i = 0; i<numNodes; i++){
 
-            //if node not in other parent's substring, append to child
+            //if arrived at substring inherited from other parent, skip
+            if(contains(childteam1.sequenceNodes[k1][0],substring1)){
+                k1+=crossOverSize;
+            }
 
+            //if node not in other parent's substring, append to child
+            if(!contains(team2.sequenceNodes[i][0],substring1)){
+                for(int j = 0; j<4; j++){
+                   childteam1.sequenceNodes[k1][j] = team2.sequenceNodes[i][j];
+                }
+                k1++;
+            }
+
+            //same thing but for child 2
+            if(contains(childteam2.sequenceNodes[k2][0],substring2)){
+                k2+=crossOverSize;
+            }
+
+            if(!contains(team1.sequenceNodes[i][0],substring2)){
+                for(int j = 0; j<4; j++){
+                   childteam2.sequenceNodes[k2][j] = team1.sequenceNodes[i][j];
+                }
+                k2++;
+            }
         }
 
 
