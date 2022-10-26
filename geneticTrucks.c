@@ -48,7 +48,7 @@ int main(){
     printTeam(test);
 
     cout<<"--------------------"<<endl;
-
+/*
     printTeam(test2);
 
     cout<<"===================="<<endl;
@@ -62,22 +62,23 @@ int main(){
 
     Team child2 = get<1>(children);
     printTeam(child2);
-    
-    //Team childtest = mutate(test);
+*/
+    Team childtest = mutate(test);
 
-    //printTeam(childtest);
+    printTeam(childtest);
 
 }
 
 void printTeam(Team team){
-    /*
+    
     cout<<"sizes of the trucks\n";
 
     for(int i = 0; i<numTrucks; i++){
         cout << team.eachTruckSize[i] << "|";
     }
+
     cout<<"\n------------------\n";
-*/
+
     cout<<"sequence of nodes\n";
     for(int i = 0; i<numNodes; i++){
         cout << team.sequenceNodes[i][0] << "|";
@@ -199,18 +200,12 @@ tuple<Team,Team> crossOver(Team team1, Team team2){
 }
 
 Team mutate(Team team){
-    Team childteam;
-    for(int i = 0; i < numNodes; i++){
-        for (int j = 0; j < 4; j++){
-            childteam.sequenceNodes[i][j] = team.sequenceNodes[i][j];
-        }
-    }
+    Team childteam = team;
 
+    //mutation of the sequence
     for(int i = 0; i < numNodes-4;i+=5){
         //check for mutation every 5 nodes
         if(experimental::randint(0,99) < mutationChance){
-            cout<<"mutated at: "<<i<<"\n";
-            cout<<"========="<<endl;
             //go through the five nodes if mutation happened and shuffle them
             for(int j = i; j<i+5; j++){
 
@@ -231,6 +226,19 @@ Team mutate(Team team){
 
             }
         }
+    }
+
+    //mutation of the truck sizes
+    for(int i = 0; i < numTrucks;i++){
+        if(experimental::randint(0,99) < mutationChance){
+
+            int indexToTakeFrom = experimental::randint(0, numTrucks-1);
+            int quantityToExchange = experimental::randint(0,min(5,childteam.eachTruckSize[indexToTakeFrom])-1);
+
+            childteam.eachTruckSize[i] += quantityToExchange;
+            childteam.eachTruckSize[indexToTakeFrom] -= quantityToExchange;
+
+        } 
     }
 
     return childteam;
