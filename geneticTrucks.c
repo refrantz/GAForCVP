@@ -12,14 +12,18 @@
 using namespace std;
 
 const int numTrucks = 9;
-const int numNodes = 55;
+const int numNodes = 54;
 const int crossoverChance = 100;
 const int mutationChance = 5;
 const int crossOverSize = 5;
+const int genSize = 16;
+const int tournamentSize = 4;
+const int epochs = 1000000;
 
+int depot[4];
 int allNodes[numNodes][4];
 double distanceBetweenNodes[numNodes][numNodes];
-
+double distanceToDepot[numNodes];
 
 struct Team{
     int eachTruckSize[numTrucks];
@@ -34,6 +38,7 @@ Team mutate(Team team);
 double calculateFitness(Team team);
 Team makeRandomTeam();
 bool contains(int e, int arr[]);
+void calculateDistancesToDepot();
 
 //debugging function
 void printTeam(Team team);
@@ -42,48 +47,87 @@ void printTeam(Team team);
 int main(){
     readFile();
     calculateAllDistances();
-    Team test = makeRandomTeam();
-    Team test2 = makeRandomTeam();
+    calculateDistancesToDepot();
 
-    printTeam(test);
+    //make first generation
+    Team oldGen[genSize];
+    Team newGen[genSize];
 
-    cout<<"--------------------"<<endl;
-/*
-    printTeam(test2);
+    for (int i = 0; i<genSize; i++){
+        oldGen[i] = makeRandomTeam();
+    }
 
-    cout<<"===================="<<endl;
+    for(int epoch = 0; epoch < epochs; epoch++){
+        //select two parents for every two elements in generation, then crossover them and mutate their children
+        for (int i = 0; i<genSize-1; i+=2){
 
-    auto children = crossOver(test,test2);
-   
-    Team child1 = get<0>(children);
-    printTeam(child1);
+            int max1 = calculateFitness(oldGen[0]);
+            int max1Index = 0;
 
-    cout<<"--------------------"<<endl;
+            int max2 = calculateFitness(oldGen[0]);
+            int max2Index = 0;
 
-    Team child2 = get<1>(children);
-    printTeam(child2);
-*/
-    Team childtest = mutate(test);
+            //tournament1
+            for(int j = 0; j<tournamentSize; j++){
+                int index = experimental::randint(0, genSize-1);
+                int participantFitness = calculateFitness(oldGen[index]);
+                if(participantFitness > max1){
+                    max1 = participantFitness;
+                    max1Index = index;
+                }
+            }
 
-    printTeam(childtest);
+            //tournament2
+            for(int j = 0; j<tournamentSize; j++){
+                int index = experimental::randint(0, genSize-1);
+                int participantFitness = calculateFitness(oldGen[index]);
+                if(participantFitness > max2){
+                    max2 = participantFitness;
+                    max2Index = index;
+                }
+            }
+
+            auto children = crossOver(oldGen[max1Index], oldGen[max2Index]);
+
+            newGen[i] = mutate(get<0>(children));
+            newGen[i+1] = mutate(get<1>(children));
+
+        }
+
+        //update oldGen;
+        for (int i = 0; i<genSize; i++){
+            oldGen[i] = newGen[i];
+        }
+
+        if(epoch % 10000 == 0){
+            cout<<calculateFitness(newGen[0])<<endl;
+        }
+    }
+
+    printTeam(newGen[0]);
 
 }
 
 void printTeam(Team team){
+    int startIndex = 0;
     
-    cout<<"sizes of the trucks\n";
+    for(int i = 0; i < numTrucks;i++){
 
-    for(int i = 0; i<numTrucks; i++){
-        cout << team.eachTruckSize[i] << "|";
+        if(i==0){
+            startIndex == 0;
+        }else{
+            startIndex += team.eachTruckSize[i-1];
+        }
+
+        for(int j = startIndex; j < startIndex+team.eachTruckSize[i]; j++){
+
+            cout << team.sequenceNodes[j][0] << "|";
+                
+        }
+
+        cout << endl;
+
     }
-
-    cout<<"\n------------------\n";
-
-    cout<<"sequence of nodes\n";
-    for(int i = 0; i<numNodes; i++){
-        cout << team.sequenceNodes[i][0] << "|";
-    }
-    cout<<endl;
 }
 
 bool contains(int e, int arr[]){
@@ -100,14 +144,27 @@ void readFile(){
     string nodeString;
     ifstream nodesFile ("nodes_clean.txt");
 
+    //getallNodes
     for (int i = 0; nodesFile; i++){
-        getline(nodesFile, nodeString);
 
-        stringstream ss(nodeString);
-        string nodeAttr;
+        if(i==0){
+            getline(nodesFile, nodeString);
 
-        for (int j = 0; ss >> nodeAttr;j++) {
-            allNodes[i][j] = stoi(nodeAttr);
+            stringstream ss(nodeString);
+            string nodeAttr;
+
+            for (int j = 0; ss >> nodeAttr;j++) {
+                depot[j] = stoi(nodeAttr);
+            } 
+        }else{
+            getline(nodesFile, nodeString);
+
+            stringstream ss(nodeString);
+            string nodeAttr;
+
+            for (int j = 0; ss >> nodeAttr;j++) {
+                allNodes[i][j] = stoi(nodeAttr);
+            }
         }
 
     }
@@ -127,9 +184,15 @@ void calculateAllDistances(){
     }
 }
 
+void calculateDistancesToDepot(){
+    for (int i = 0;i < numNodes; i++){
+        distanceToDepot[i] = calculateDistanceNodes(depot, allNodes[i]);
+    }
+}
+
 tuple<Team,Team> crossOver(Team team1, Team team2){
-    Team childteam1;
-    Team childteam2;
+    Team childteam1 = team1;
+    Team childteam2 = team2;
         
     int substring1[crossOverSize];
     int substring2[crossOverSize];
@@ -191,9 +254,6 @@ tuple<Team,Team> crossOver(Team team1, Team team2){
         }
 
 
-    }else{
-        childteam1 = team1;
-        childteam2 = team2;
     }
 
     return make_tuple(childteam1,childteam2);
@@ -246,12 +306,20 @@ Team mutate(Team team){
 
 double calculateFitness(Team team){
     double totalDistance = 0;
+    int startIndex = 0;
 
     for(int i = 0; i < numTrucks;i++){
 
         int totalCargo = 0;
+        if(i==0){
+            startIndex == 0;
+        }else{
+            startIndex += team.eachTruckSize[i-1];
+        }
 
-        for(int j = 0; j < team.eachTruckSize[i]; j++){
+        totalDistance -= distanceToDepot[startIndex];
+
+        for(int j = startIndex; j < startIndex+team.eachTruckSize[i]; j++){
 
             totalCargo += team.sequenceNodes[j][1];
 
