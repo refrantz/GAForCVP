@@ -13,7 +13,7 @@ using namespace std;
 
 const int numTrucks = 9;
 const int numNodes = 55;
-const int crossoverChance = 50;
+const int crossoverChance = 100;
 const int mutationChance = 5;
 const int crossOverSize = 5;
 
@@ -82,10 +82,11 @@ void printTeam(Team team){
     for(int i = 0; i<numNodes; i++){
         cout << team.sequenceNodes[i][0] << "|";
     }
+    cout<<endl;
 }
 
 bool contains(int e, int arr[]){
-    for (int i = 0; i<sizeof(*arr)/sizeof(e); i++){
+    for (int i = 0; i<crossOverSize; i++){
         if (arr[i] == e){
             return true;
         }
@@ -129,18 +130,19 @@ tuple<Team,Team> crossOver(Team team1, Team team2){
     Team childteam1;
     Team childteam2;
         
-    int substring1[4];
-    int substring2[4];
+    int substring1[crossOverSize];
+    int substring2[crossOverSize];
 
     if (experimental::randint(0,99) < crossoverChance){
 
         int beginIndexSubstring = experimental::randint(0,numNodes-crossOverSize);
         int endIndexSubstring = beginIndexSubstring+crossOverSize;
-
+        int stringIndex = 0;
         //copy randomly selected subsequence to children
         for(int i = beginIndexSubstring; i < endIndexSubstring;i++){
-            substring1[i] = team1.sequenceNodes[i][0];
-            substring2[i] = team2.sequenceNodes[i][0];
+            substring1[stringIndex] = team1.sequenceNodes[i][0];
+            substring2[stringIndex] = team2.sequenceNodes[i][0];
+            stringIndex++;
 
             for(int j = 0; j<4; j++){
                 childteam1.sequenceNodes[i][j] = team1.sequenceNodes[i][j];
@@ -155,7 +157,11 @@ tuple<Team,Team> crossOver(Team team1, Team team2){
 
             //if arrived at substring inherited from other parent, skip
             if(contains(childteam1.sequenceNodes[k1][0],substring1)){
-                k1+=crossOverSize;
+                if(k1+crossOverSize < numNodes){
+                    k1+=crossOverSize;
+                }else{
+                    break;
+                }
             }
 
             //if node not in other parent's substring, append to child
@@ -168,7 +174,11 @@ tuple<Team,Team> crossOver(Team team1, Team team2){
 
             //same thing but for child 2
             if(contains(childteam2.sequenceNodes[k2][0],substring2)){
-                k2+=crossOverSize;
+                if(k2+crossOverSize < numNodes){
+                    k2+=crossOverSize;
+                }else{
+                    break;
+                }
             }
 
             if(!contains(team1.sequenceNodes[i][0],substring2)){
