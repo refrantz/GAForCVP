@@ -17,9 +17,9 @@ const int numNodes = 54;
 const int crossoverChance = 50;
 const int mutationChance = 10;
 const int crossOverSize = 5;
-const int genSize = 32;
-const int tournamentSize = 6;
-const int epochs = 1000000;
+const int genSize = 16;
+const int tournamentSize = 4;
+const int epochs = 75000;
 
 int depot[4];
 int allNodes[numNodes][4];
@@ -46,11 +46,14 @@ void printTeam(Team team);
 
 
 int main(){
-    //for(int i = 0; i<30;i++){
+    readFile();
+    calculateAllDistances();
+    calculateDistancesToDepot();
+
+    Team goat = makeRandomTeam();
+
+    for(int i = 0; i<30;i++){
         clock_t c_start = clock();
-        readFile();
-        calculateAllDistances();
-        calculateDistancesToDepot();
 
         //make first generation
         Team oldGen[genSize];
@@ -127,9 +130,6 @@ int main(){
                 oldGen[i] = newGen[i];
             }
 
-            if(epoch % 100000 == 0){
-                cout<<calculateFitness(newGen[0])<<endl;
-            }
         }
 
         //get best from last generation
@@ -138,16 +138,23 @@ int main(){
         for(int i = 0; i < genSize; i++){
             if(calculateFitness(newGen[i])>max){
                 maxTeam = newGen[i];
+                max = calculateFitness(newGen[i]);
             }
         }
+
+        if(max > calculateFitness(goat)){
+            goat = maxTeam;
+        }
+
         cout<<"\n"<<calculateFitness(maxTeam)<<endl;
-        printTeam(maxTeam);
 
         clock_t c_end = clock();
 
         double time_elapsed_ms = 1000.0 * (c_end-c_start) / CLOCKS_PER_SEC;
         cout << "CPU time used: " << time_elapsed_ms /1000<< " ms\n";
-    //}
+    }
+
+    printTeam(goat);
 
 }
 
