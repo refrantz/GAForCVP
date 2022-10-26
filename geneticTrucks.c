@@ -13,8 +13,8 @@ using namespace std;
 
 const int numTrucks = 9;
 const int numNodes = 54;
-const int crossoverChance = 100;
-const int mutationChance = 5;
+const int crossoverChance = 50;
+const int mutationChance = 10;
 const int crossOverSize = 5;
 const int genSize = 16;
 const int tournamentSize = 4;
@@ -104,7 +104,16 @@ int main(){
         }
     }
 
-    printTeam(newGen[0]);
+    //get best from last generation
+    int max = calculateFitness(newGen[0]);
+    Team maxTeam = newGen[0];
+    for(int i = 0; i < genSize; i++){
+        if(calculateFitness(newGen[i])>max){
+            maxTeam = newGen[i];
+        }
+    }
+    cout<<"\n"<<calculateFitness(maxTeam)<<endl;
+    printTeam(maxTeam);
 
 }
 
@@ -112,6 +121,9 @@ void printTeam(Team team){
     int startIndex = 0;
     
     for(int i = 0; i < numTrucks;i++){
+        double totalDistance = 0;
+
+        int totalCargo = 0;
 
         if(i==0){
             startIndex == 0;
@@ -119,13 +131,21 @@ void printTeam(Team team){
             startIndex += team.eachTruckSize[i-1];
         }
 
+        totalDistance -= distanceToDepot[startIndex];
+
         for(int j = startIndex; j < startIndex+team.eachTruckSize[i]; j++){
 
             cout << team.sequenceNodes[j][0] << "|";
+            totalCargo += team.sequenceNodes[j][1];
+
+            if(j % 2 == 0){
+                totalDistance -= *distanceBetweenNodes[team.sequenceNodes[j][0]-1,team.sequenceNodes[j+1][0]-1];
+            }
                 
         }
-
-        cout << endl;
+        cout << "\nTotal cargo shipped: " << totalCargo;
+        cout << "\nTotal distance traveled: " << totalDistance;
+        cout << "\n----------------------------" << endl;
 
     }
 }
@@ -144,31 +164,28 @@ void readFile(){
     string nodeString;
     ifstream nodesFile ("nodes_clean.txt");
 
+    //get depot
+    getline(nodesFile, nodeString);
+
+    stringstream ss(nodeString);
+    string nodeAttr;
+
+    for (int j = 0; ss >> nodeAttr;j++) {
+        depot[j] = stoi(nodeAttr);
+    }
+
     //getallNodes
-    for (int i = 0; nodesFile; i++){
+    for (int i = 0; nodesFile; i++){       
+        getline(nodesFile, nodeString);
 
-        if(i==0){
-            getline(nodesFile, nodeString);
+        stringstream ss(nodeString);
+        string nodeAttr;
 
-            stringstream ss(nodeString);
-            string nodeAttr;
-
-            for (int j = 0; ss >> nodeAttr;j++) {
-                depot[j] = stoi(nodeAttr);
-            } 
-        }else{
-            getline(nodesFile, nodeString);
-
-            stringstream ss(nodeString);
-            string nodeAttr;
-
-            for (int j = 0; ss >> nodeAttr;j++) {
-                allNodes[i][j] = stoi(nodeAttr);
-            }
+        for (int j = 0; ss >> nodeAttr;j++) {
+            allNodes[i][j] = stoi(nodeAttr);
         }
 
     }
-
 } 
 
 double calculateDistanceNodes(int node1[4], int node2[4]){
@@ -356,6 +373,7 @@ Team makeRandomTeam(){
         for (int j = 0; j<4;j++){
             generatedTeam.sequenceNodes[i][j] = allNodes[i][j];
         }
+        
     }
 
     //shuffle team's nodes
