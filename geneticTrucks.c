@@ -8,6 +8,7 @@
 #include <bits/stdc++.h>
 #include <random>
 #include <algorithm>
+#include <ctime>
 #include <experimental/random>
 using namespace std;
 
@@ -16,8 +17,8 @@ const int numNodes = 54;
 const int crossoverChance = 50;
 const int mutationChance = 10;
 const int crossOverSize = 5;
-const int genSize = 16;
-const int tournamentSize = 4;
+const int genSize = 32;
+const int tournamentSize = 6;
 const int epochs = 1000000;
 
 int depot[4];
@@ -45,75 +46,108 @@ void printTeam(Team team);
 
 
 int main(){
-    readFile();
-    calculateAllDistances();
-    calculateDistancesToDepot();
+    //for(int i = 0; i<30;i++){
+        clock_t c_start = clock();
+        readFile();
+        calculateAllDistances();
+        calculateDistancesToDepot();
 
-    //make first generation
-    Team oldGen[genSize];
-    Team newGen[genSize];
+        //make first generation
+        Team oldGen[genSize];
+        Team newGen[genSize];
 
-    for (int i = 0; i<genSize; i++){
-        oldGen[i] = makeRandomTeam();
-    }
-
-    for(int epoch = 0; epoch < epochs; epoch++){
-        //select two parents for every two elements in generation, then crossover them and mutate their children
-        for (int i = 0; i<genSize-1; i+=2){
-
-            int max1 = calculateFitness(oldGen[0]);
-            int max1Index = 0;
-
-            int max2 = calculateFitness(oldGen[0]);
-            int max2Index = 0;
-
-            //tournament1
-            for(int j = 0; j<tournamentSize; j++){
-                int index = experimental::randint(0, genSize-1);
-                int participantFitness = calculateFitness(oldGen[index]);
-                if(participantFitness > max1){
-                    max1 = participantFitness;
-                    max1Index = index;
-                }
-            }
-
-            //tournament2
-            for(int j = 0; j<tournamentSize; j++){
-                int index = experimental::randint(0, genSize-1);
-                int participantFitness = calculateFitness(oldGen[index]);
-                if(participantFitness > max2){
-                    max2 = participantFitness;
-                    max2Index = index;
-                }
-            }
-
-            auto children = crossOver(oldGen[max1Index], oldGen[max2Index]);
-
-            newGen[i] = mutate(get<0>(children));
-            newGen[i+1] = mutate(get<1>(children));
-
-        }
-
-        //update oldGen;
         for (int i = 0; i<genSize; i++){
-            oldGen[i] = newGen[i];
+            oldGen[i] = makeRandomTeam();
         }
 
-        if(epoch % 10000 == 0){
-            cout<<calculateFitness(newGen[0])<<endl;
-        }
-    }
+        for(int epoch = 0; epoch < epochs; epoch++){
+            //select two parents for every two elements in generation, then crossover them and mutate their children
+            for (int i = 0; i<genSize-1; i+=2){
 
-    //get best from last generation
-    int max = calculateFitness(newGen[0]);
-    Team maxTeam = newGen[0];
-    for(int i = 0; i < genSize; i++){
-        if(calculateFitness(newGen[i])>max){
-            maxTeam = newGen[i];
+                int max1 = calculateFitness(oldGen[0]);
+                int max1Index = 0;
+
+                int max2 = calculateFitness(oldGen[0]);
+                int max2Index = 0;
+
+                //tournament1
+                for(int j = 0; j<tournamentSize; j++){
+                    int index = experimental::randint(0, genSize-1);
+                    int participantFitness = calculateFitness(oldGen[index]);
+                    if(participantFitness > max1){
+                        max1 = participantFitness;
+                        max1Index = index;
+                    }
+                }
+
+                //tournament2
+                for(int j = 0; j<tournamentSize; j++){
+                    int index = experimental::randint(0, genSize-1);
+                    int participantFitness = calculateFitness(oldGen[index]);
+                    if(participantFitness > max2){
+                        max2 = participantFitness;
+                        max2Index = index;
+                    }
+                }
+
+                auto children = crossOver(oldGen[max1Index], oldGen[max2Index]);
+
+                newGen[i] = mutate(get<0>(children));
+                newGen[i+1] = mutate(get<1>(children));
+
+            }
+
+            //make sure the best is passed through and update old gen;
+            for (int i = 0; i<genSize; i++){
+
+    /* guarantees the best never gets dies but makes the algorithm 3x slower for some reason
+                //get worst team index from newGen
+                int min = calculateFitness(newGen[0]);
+                int minTeamIndex = 0;
+                for(int i = 0; i < genSize; i++){
+                    if(calculateFitness(newGen[i])<min){
+                        minTeamIndex = i;
+                    }
+                }
+
+                //get best team from oldGen
+                int max = calculateFitness(newGen[0]);
+                Team maxTeam = newGen[0];
+                for(int i = 0; i < genSize; i++){
+                    if(calculateFitness(oldGen[i])>max){
+                        maxTeam = oldGen[i];
+                    }
+                }
+
+                if(max > min){
+                    newGen[minTeamIndex] = maxTeam;
+                }
+    */
+
+                oldGen[i] = newGen[i];
+            }
+
+            if(epoch % 100000 == 0){
+                cout<<calculateFitness(newGen[0])<<endl;
+            }
         }
-    }
-    cout<<"\n"<<calculateFitness(maxTeam)<<endl;
-    printTeam(maxTeam);
+
+        //get best from last generation
+        int max = calculateFitness(newGen[0]);
+        Team maxTeam = newGen[0];
+        for(int i = 0; i < genSize; i++){
+            if(calculateFitness(newGen[i])>max){
+                maxTeam = newGen[i];
+            }
+        }
+        cout<<"\n"<<calculateFitness(maxTeam)<<endl;
+        printTeam(maxTeam);
+
+        clock_t c_end = clock();
+
+        double time_elapsed_ms = 1000.0 * (c_end-c_start) / CLOCKS_PER_SEC;
+        cout << "CPU time used: " << time_elapsed_ms /1000<< " ms\n";
+    //}
 
 }
 
@@ -121,6 +155,7 @@ void printTeam(Team team){
     int startIndex = 0;
     
     for(int i = 0; i < numTrucks;i++){
+        cout << "\nSizes: " << team.eachTruckSize[i] <<endl;
         double totalDistance = 0;
 
         int totalCargo = 0;
@@ -131,18 +166,19 @@ void printTeam(Team team){
             startIndex += team.eachTruckSize[i-1];
         }
 
-        totalDistance -= distanceToDepot[startIndex];
+        totalDistance -= distanceToDepot[team.sequenceNodes[startIndex][0]-2];
+        
+        for(int j = startIndex; j < startIndex+team.eachTruckSize[i]-1; j++){
 
-        for(int j = startIndex; j < startIndex+team.eachTruckSize[i]; j++){
-
-            cout << team.sequenceNodes[j][0] << "|";
+            cout << "|" << team.sequenceNodes[j][0]-1 << "|";
             totalCargo += team.sequenceNodes[j][1];
 
-            if(j % 2 == 0){
-                totalDistance -= *distanceBetweenNodes[team.sequenceNodes[j][0]-1,team.sequenceNodes[j+1][0]-1];
-            }
+            totalDistance -= distanceBetweenNodes[team.sequenceNodes[j][0]-2][team.sequenceNodes[j+1][0]-2];
                 
         }
+        cout << "|" << team.sequenceNodes[startIndex+team.eachTruckSize[i]-1][0] << "|";
+        totalCargo += team.sequenceNodes[startIndex+team.eachTruckSize[i]-1][1];
+
         cout << "\nTotal cargo shipped: " << totalCargo;
         cout << "\nTotal distance traveled: " << totalDistance;
         cout << "\n----------------------------" << endl;
@@ -305,6 +341,7 @@ Team mutate(Team team){
         }
     }
 
+    int total = 0;
     //mutation of the truck sizes
     for(int i = 0; i < numTrucks;i++){
         if(experimental::randint(0,99) < mutationChance){
@@ -312,11 +349,13 @@ Team mutate(Team team){
             int indexToTakeFrom = experimental::randint(0, numTrucks-1);
             int quantityToExchange = experimental::randint(0,min(5,childteam.eachTruckSize[indexToTakeFrom])-1);
 
-            childteam.eachTruckSize[i] += quantityToExchange;
             childteam.eachTruckSize[indexToTakeFrom] -= quantityToExchange;
+            childteam.eachTruckSize[i] += quantityToExchange;
+            
 
         } 
     }
+
 
     return childteam;
 }
@@ -334,21 +373,29 @@ double calculateFitness(Team team){
             startIndex += team.eachTruckSize[i-1];
         }
 
-        totalDistance -= distanceToDepot[startIndex];
+        totalDistance -= distanceToDepot[team.sequenceNodes[startIndex][0]-2];
 
-        for(int j = startIndex; j < startIndex+team.eachTruckSize[i]; j++){
-
+        for(int j = startIndex; j < startIndex+team.eachTruckSize[i]-1; j++){
             totalCargo += team.sequenceNodes[j][1];
 
             if(totalCargo > 100){
 
                 totalDistance -= 10000.0;
 
-            }else if(j % 2 == 0){
+            }else{
 
-                totalDistance -= *distanceBetweenNodes[team.sequenceNodes[j][0]-1,team.sequenceNodes[j+1][0]-1];
+                totalDistance -= distanceBetweenNodes[team.sequenceNodes[j][0]-2][team.sequenceNodes[j+1][0]-2];
             } 
         }
+
+        totalCargo += team.sequenceNodes[startIndex+team.eachTruckSize[i]-1][1];
+
+        if(totalCargo > 100){
+
+            totalDistance -= 10000.0;
+
+        }
+
     }
 
     return totalDistance;
@@ -367,6 +414,7 @@ Team makeRandomTeam(){
         generatedTeam.eachTruckSize[i] = randsize;
         lastTruckSize += randsize;
     }
+    generatedTeam.eachTruckSize[0] += numNodes-lastTruckSize;
 
     //copy allnodes to team
     for (int i = 0; i<numNodes;i++){
